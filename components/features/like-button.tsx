@@ -29,7 +29,8 @@ export function LikeButton({ kosId, initialIsLiked, user }: LikeButtonProps) {
     if (isLoading) return;
 
     if (!user) {
-      redirect("/login");
+      router.push("/login");
+      return;
     }
 
     // Optimistic update

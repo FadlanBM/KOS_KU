@@ -145,19 +145,14 @@ export async function KosListing({
               </div>
             </div>
 
-            <div className="mt-4 pt-4 border-t grid grid-cols-2 gap-2">
-              <Button
-                asChild
-                variant="outline"
-                className="w-full hover:bg-muted transition-colors"
-              >
-                <Link href={`/listings/${kos.id}`}>Lihat Detail</Link>
+            <div className="mt-6 flex items-center gap-2">
+              <Button asChild className="flex-1">
+                <Link href={`/user-dashboard/kos/${kos.id}`}>Detail</Link>
               </Button>
-              <Button
-                asChild
-                className="w-full bg-primary hover:bg-primary/90 transition-colors"
-              >
-                <Link href={`/listings/${kos.id}`}>Ajukan Sewa</Link>
+              <Button asChild variant="outline" className="flex-1">
+                <Link href={`/user-dashboard/kos/${kos.id}/rent`}>
+                  Sewa Sekarang
+                </Link>
               </Button>
             </div>
           </div>

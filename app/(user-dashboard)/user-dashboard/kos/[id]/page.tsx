@@ -72,21 +72,18 @@ export default async function KosDetailPage({ params }: KosDetailPageProps) {
 
   return (
     <>
-      <HeroHeader />
-      <main className="container mx-auto px-3 sm:px-4 py-8 sm:py-10 md:py-14 pt-28 sm:pt-32">
-        <div className="mb-4 sm:mb-6 mt-4 sm:mt-2">
-          <Button asChild variant="ghost" size="sm">
-            <Link href="/listings" className="text-sm">
-              <ArrowLeft className="size-4 mr-2" />
-              <span className="hidden sm:inline">Kembali ke Daftar Kos</span>
-              <span className="sm:hidden">Kembali</span>
-            </Link>
-          </Button>
-        </div>
-        <Suspense fallback={<KosDetailSkeleton />}>
-          <KosDetailContent id={id} />
-        </Suspense>
-      </main>
+      <div className="mb-4 sm:mb-6 mt-4 sm:mt-2">
+        <Button asChild variant="ghost" size="sm">
+          <Link href="/user-dashboard/kos" className="text-sm">
+            <ArrowLeft className="size-4 mr-2" />
+            <span className="hidden sm:inline">Kembali ke Daftar Kos</span>
+            <span className="sm:hidden">Kembali</span>
+          </Link>
+        </Button>
+      </div>
+      <Suspense fallback={<KosDetailSkeleton />}>
+        <KosDetailContent id={id} />
+      </Suspense>
     </>
   );
 }

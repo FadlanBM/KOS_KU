@@ -21,7 +21,11 @@ const navigation = [
     href: "/user-dashboard",
     icon: LayoutDashboard,
   },
-
+  {
+    name: "Cari Kos",
+    href: "/user-dashboard/kos",
+    icon: Search,
+  },
   {
     name: "Favorit",
     href: "/user-dashboard/favorites",

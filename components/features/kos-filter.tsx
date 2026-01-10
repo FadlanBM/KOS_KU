@@ -117,7 +117,7 @@ export function KosFilter({ kosList, onFilteredChange }: KosFilterProps) {
     });
 
     const queryString = params.toString();
-    router.push(`/listings${queryString ? `?${queryString}` : ""}`, {
+    router.push(`/user-dashboard/kos${queryString ? `?${queryString}` : ""}`, {
       scroll: false,
     });
   };
@@ -138,7 +138,7 @@ export function KosFilter({ kosList, onFilteredChange }: KosFilterProps) {
     };
     setFormValues(emptyFilters);
     setActiveFilters(emptyFilters);
-    router.push("/listings", { scroll: false });
+    router.push("/user-dashboard/kos", { scroll: false });
   };
 
   const hasActiveFilters =

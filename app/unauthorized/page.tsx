@@ -30,7 +30,7 @@ export default function UnauthorizedPage() {
               </Link>
             </Button>
             <Button asChild variant="outline">
-              <Link href="/listings">
+              <Link href="/user-dashboard/kos">
                 <ArrowLeft className="size-4 mr-2" />
                 Lihat Daftar Kos
               </Link>

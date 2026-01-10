@@ -23,7 +23,9 @@ const SLIDES = [
 ];
 
 function HeroCarousel() {
-  const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true }, [Autoplay()]);
+  const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true }, [
+    Autoplay({ delay: 5000, stopOnInteraction: false }),
+  ]);
   const [selectedIndex, setSelectedIndex] = useState(0);
 
   const scrollPrev = useCallback(() => {
@@ -54,7 +56,7 @@ function HeroCarousel() {
   }, [emblaApi, onSelect]);
 
   return (
-    <div className="absolute inset-0 size-full">
+    <div className="absolute inset-0 size-full z-0">
       {/* Carousel Viewport */}
       <div className="h-full w-full" ref={emblaRef}>
         <div className="flex h-full">
@@ -66,7 +68,7 @@ function HeroCarousel() {
                 alt={slide.alt}
               />
               {/* Overlay */}
-              <div className="absolute inset-0 bg-black/50" />
+              <div className="absolute inset-0 bg-black/60 shadow-[inset_0_0_100px_rgba(0,0,0,0.5)]" />
             </div>
           ))}
         </div>
@@ -117,31 +119,21 @@ function HeroCarousel() {
 
 export default function HeroSection() {
   return (
-    <main className="relative h-screen w-full overflow-hidden">
+    <main className="relative h-[calc(100vh-64px)] w-full overflow-hidden">
       <HeroCarousel />
-
-      <div className="relative z-10 flex h-full items-center justify-center px-6">
-        <div className="mx-auto max-w-4xl text-center">
+      <div className="relative z-10 flex h-full items-center justify-center px-6 pointer-events-none">
+        <div className="mx-auto max-w-4xl text-center pointer-events-auto">
           <h1 className="text-balance text-5xl font-bold text-white md:text-6xl lg:text-7xl">
-            Ship 10x Faster with NS
+            Miliki Kos Siap Huni, Siap Cuan
           </h1>
           <p className="mt-6 text-pretty text-lg text-gray-200 md:text-xl">
-            Highly customizable components for building modern websites and
-            applications that look and feel the way you mean it.
+            Properti kos terawat dengan potensi sewa stabil. Cek detail
+            fasilitas, lokasi, dan proyeksi pemasukan dalam satu halaman.
           </p>
 
           <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
             <Button asChild size="lg" className="px-8 text-base font-semibold">
-              <Link href="#link">Start Building</Link>
-            </Button>
-            <Button
-              key={2}
-              asChild
-              size="lg"
-              variant="outline"
-              className="px-8 text-base font-semibold bg-transparent text-white border-white hover:bg-white hover:text-black transition-colors"
-            >
-              <Link href="#link">Request a demo</Link>
+              <Link href="/user-dashboard/kos">Cari Kos</Link>
             </Button>
           </div>
         </div>

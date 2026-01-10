@@ -271,7 +271,7 @@ export function KosDetail({ kos }: KosDetailProps) {
             {!isFullyOccupied && (
               <div className="space-y-2 sm:space-y-3">
                 <Button className="w-full" size="default" asChild>
-                  <Link href={`/listings/${kos.id}/rent`}>Ajukan Sewa</Link>
+                  <Link href={`/user-dashboard/kos/${kos.id}/rent`}>Ajukan Sewa</Link>
                 </Button>
                 {whatsappUrl ? (
                   <Button

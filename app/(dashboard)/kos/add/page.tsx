@@ -154,19 +154,12 @@ export default function AddKosPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <Link href="/kos">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="size-4" />
-          </Button>
-        </Link>
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            Tambah Ruangan Kos
-          </h1>
-          <p className="text-muted-foreground">
-            Tambahkan informasi ruangan kos baru
-          </p>
-        </div>
+        <Button variant="ghost" size="icon" asChild>
+          <Link href="/kos">
+            <ArrowLeft className="size-5" />
+          </Link>
+        </Button>
+        <h1 className="text-3xl font-bold tracking-tight">Jual Properti Kos</h1>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">

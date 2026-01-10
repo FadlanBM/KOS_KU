@@ -17,7 +17,7 @@ export default function NotFound() {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button asChild>
-              <Link href="/listings">
+              <Link href="/user-dashboard/kos">
                 <ArrowLeft className="size-4 mr-2" />
                 Kembali ke Daftar Kos
               </Link>
@@ -34,4 +34,3 @@ export default function NotFound() {
     </>
   );
 }
-

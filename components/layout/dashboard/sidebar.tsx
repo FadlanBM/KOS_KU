@@ -9,6 +9,7 @@ import {
   Settings,
   Home,
   Receipt,
+  PlusCircle,
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -20,7 +21,12 @@ const navigation = [
     icon: LayoutDashboard,
   },
   {
-    name: "Kos",
+    name: "Jual Properti",
+    href: "/kos/add",
+    icon: PlusCircle,
+  },
+  {
+    name: "Daftar Kos",
     href: "/kos",
     icon: Home,
   },

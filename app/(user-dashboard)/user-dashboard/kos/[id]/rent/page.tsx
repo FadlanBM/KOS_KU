@@ -41,6 +41,17 @@ export default function RentPage({ params }: RentPageProps) {
 
     const fetchKos = async () => {
       const supabase = createClient();
+
+      // Check authentication first
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("Anda harus login untuk menyewa");
+        router.push(`/login?redirect=/user-dashboard/kos/${id}/rent`);
+        return;
+      }
+
       const { data, error } = await supabase
         .from("kos")
         .select("*")
@@ -49,7 +60,7 @@ export default function RentPage({ params }: RentPageProps) {
 
       if (error) {
         toast.error("Gagal memuat data kos");
-        router.push("/listings");
+        router.push("/user-dashboard/kos");
         return;
       }
 
@@ -135,7 +146,10 @@ export default function RentPage({ params }: RentPageProps) {
     <div className="container max-w-2xl mx-auto py-8 px-4">
       <div className="mb-6">
         <Button variant="ghost" asChild className="pl-0 hover:bg-transparent">
-          <Link href={`/listings/${id}`} className="flex items-center gap-2">
+          <Link
+            href={`/user-dashboard/kos/${id}`}
+            className="flex items-center gap-2"
+          >
             <ArrowLeft className="size-4" />
             Kembali ke Detail
           </Link>

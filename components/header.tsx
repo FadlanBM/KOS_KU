@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 
 const menuItems = [
   { name: "Home", href: "/" },
-  { name: "Kos", href: "/listings" },
+  { name: "Kos", href: "/user-dashboard/kos" },
 ];
 
 export const HeroHeader = () => {
@@ -71,16 +71,34 @@ export const HeroHeader = () => {
     // Listen for auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return;
 
       const currentUser = session?.user ?? null;
-      setUser(currentUser);
 
-      if (currentUser) {
-        fetchUserRole();
-      } else {
-        setUserRole(null);
+      // Only update and fetch role if user changed or it's a specific relevant event
+      // Avoid fetching role on TOKEN_REFRESHED to prevent infinite loops
+      if (
+        event === "SIGNED_IN" ||
+        event === "SIGNED_OUT" ||
+        event === "USER_UPDATED"
+      ) {
+        setUser(currentUser);
+        if (currentUser) {
+          fetchUserRole();
+        } else {
+          setUserRole(null);
+        }
+      } else if (event === "INITIAL_SESSION" || !user) {
+        // Handle initial session or if user state is missing
+        if (currentUser?.id !== user?.id) {
+          setUser(currentUser);
+          if (currentUser) {
+            fetchUserRole();
+          } else {
+            setUserRole(null);
+          }
+        }
       }
 
       setLoading(false);
@@ -93,10 +111,10 @@ export const HeroHeader = () => {
   }, [fetchUserRole]);
 
   return (
-    <header>
+    <header className="sticky top-0 z-50 w-full">
       <nav
         data-state={menuState && "active"}
-        className="bg-background/50 fixed z-20 w-full border-b backdrop-blur-3xl"
+        className="bg-background/50 w-full border-b backdrop-blur-3xl"
       >
         <div className="mx-auto max-w-6xl px-6 transition-all duration-300">
           <div className="relative flex flex-wrap items-center justify-between gap-6 py-3 lg:gap-0 lg:py-4">
@@ -118,7 +136,7 @@ export const HeroHeader = () => {
                 <X className="in-data-[state=active]:rotate-0 in-data-[state=active]:scale-100 in-data-[state=active]:opacity-100 absolute inset-0 m-auto size-6 -rotate-180 scale-0 opacity-0 duration-200" />
               </button>
 
-              <div className="hidden lg:block">
+              {/* <div className="hidden lg:block">
                 <ul className="flex gap-8 text-sm">
                   {menuItems.map((item, index) => {
                     const isActive =
@@ -142,7 +160,7 @@ export const HeroHeader = () => {
                     );
                   })}
                 </ul>
-              </div>
+              </div> */}
             </div>
 
             <div className="bg-background in-data-[state=active]:block lg:in-data-[state=active]:flex mb-6 hidden w-full flex-wrap items-center justify-end space-y-8 rounded-3xl border p-6 shadow-2xl shadow-zinc-300/20 md:flex-nowrap lg:m-0 lg:flex lg:w-fit lg:gap-6 lg:space-y-0 lg:border-transparent lg:bg-transparent lg:p-0 lg:shadow-none dark:shadow-none dark:lg:bg-transparent">

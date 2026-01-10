@@ -1,17 +1,13 @@
+import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { KosListing } from "@/components/features/kos-listing";
 import { KosFilter } from "@/components/features/kos-filter";
 import { FilteredKosList } from "@/components/features/filtered-kos-list";
 import type { KosData } from "@/components/features/dashboard/kos-card";
+import { KosListingSkeleton } from "@/components/loading/kos-skeleton";
 
-export default async function UserKosPage() {
+async function KosListData() {
   const supabase = await createClient();
-
-  // Fetch user data
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
   // Fetch semua data kos yang tersedia (available_rooms > 0)
   const { data: kosData, error } = await supabase
     .from("kos")
@@ -40,14 +36,42 @@ export default async function UserKosPage() {
       totalRooms: kos.total_rooms,
     })) || [];
 
-  // Fetch liked kos IDs by user
-  const { data: userLikes } = await supabase
-    .from("user_likes")
-    .select("kos_id")
-    .eq("user_id", (await supabase.auth.getUser()).data.user?.id || "");
+  // Fetch user likes if logged in
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  const likedKosIds = new Set(userLikes?.map((like) => like.kos_id) || []);
+  let likedKosIds: Set<string> | undefined;
 
+  if (user) {
+    const { data: userLikes } = await supabase
+      .from("user_likes")
+      .select("kos_id")
+      .eq("user_id", user.id);
+
+    likedKosIds = new Set(userLikes?.map((like) => like.kos_id) || []);
+  }
+
+  if (kosList.length === 0) {
+    return (
+      <div className="rounded-lg border p-12 text-center">
+        <p className="text-muted-foreground mb-4">
+          Belum ada kos yang tersedia saat ini.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <FilteredKosList
+      initialKosList={kosList}
+      likedKosIds={likedKosIds}
+      user={user}
+    />
+  );
+}
+
+export default async function UserKosPage() {
   return (
     <div className="space-y-6">
       <div>
@@ -57,19 +81,9 @@ export default async function UserKosPage() {
         </p>
       </div>
 
-      {kosList.length === 0 ? (
-        <div className="rounded-lg border p-12 text-center">
-          <p className="text-muted-foreground mb-4">
-            Belum ada kos yang tersedia saat ini.
-          </p>
-        </div>
-      ) : (
-        <FilteredKosList
-          initialKosList={kosList}
-          likedKosIds={likedKosIds}
-          user={user}
-        />
-      )}
+      <Suspense fallback={<KosListingSkeleton count={6} />}>
+        <KosListData />
+      </Suspense>
     </div>
   );
 }

@@ -73,7 +73,7 @@ export async function KosSection() {
       <div className="container mx-auto px-4">
         <div className="mb-12 text-center">
           <h2 className="text-3xl font-bold tracking-tight md:text-4xl mb-4">
-            Kos Tersedia
+            List Kos
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
             Temukan kos yang sesuai dengan kebutuhan Anda. Pilih dari berbagai
@@ -87,7 +87,7 @@ export async function KosSection() {
 
         <div className="mt-12 text-center">
           <Button asChild size="lg">
-            <Link href="/listings">
+            <Link href="/user-dashboard/kos">
               Lihat Semua Kos
               <span className="ml-2">→</span>
             </Link>

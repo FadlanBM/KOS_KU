@@ -133,7 +133,7 @@ export default function TransactionsPage() {
                 Anda belum melakukan transaksi pembayaran sewa kos.
               </p>
               <Button asChild>
-                <Link href="/listings">Cari Kos Sekarang</Link>
+                <Link href="/user-dashboard/kos">Cari Kos Sekarang</Link>
               </Button>
             </div>
           </CardContent>

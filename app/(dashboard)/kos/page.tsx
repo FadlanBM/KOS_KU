@@ -56,7 +56,7 @@ export default async function KosPage() {
         <Link href="/kos/add">
           <Button>
             <Plus className="size-4" />
-            Tambah Ruangan Kos
+            Jual Properti Kos
           </Button>
         </Link>
       </div>
@@ -67,7 +67,7 @@ export default async function KosPage() {
             Belum ada data kos. Tambahkan kos pertama Anda!
           </p>
           <Link href="/kos/add">
-            <Button>Tambah Kos</Button>
+            <Button>Jual Properti Kos</Button>
           </Link>
         </div>
       ) : (
