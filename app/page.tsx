@@ -39,6 +39,7 @@ export default async function Home() {
       <HeroHeader />
       <HeroSection />
       <StatsSection />
+      <IntegrationsSection />
       {/* <Features /> */}
       <KosSection />
       <FooterSection />
