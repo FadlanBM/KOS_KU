@@ -1,5 +1,6 @@
 "use client";
 
+import Script from "next/script";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -12,6 +13,12 @@ import { Select } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
+
+declare global {
+  interface Window {
+    snap: any;
+  }
+}
 
 interface RentPageProps {
   params: Promise<{ id: string }>;
@@ -103,20 +110,54 @@ export default function RentPage({ params }: RentPageProps) {
         return;
       }
 
-      const { error } = await supabase.from("transactions").insert({
-        user_id: user.id,
-        kos_id: id,
-        start_date: startDate,
-        duration_months: parseInt(duration),
-        total_price: totalPrice,
-        ktp_number: ktp,
-        status: "pending",
+      // Call payment API
+      const response = await fetch("/api/payment", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          kosId: id,
+          kosName: kos.name,
+          startDate,
+          duration: parseInt(duration),
+          totalPrice,
+          ktpNumber: ktp,
+          customerDetails: {
+            firstName: user.user_metadata?.full_name || "Customer",
+            lastName: "",
+            email: user.email,
+            phone: user.phone || "08123456789", // Default phone if not available
+          },
+        }),
       });
 
-      if (error) throw error;
+      const data = await response.json();
 
-      toast.success("Pengajuan sewa berhasil!");
-      router.push("/user-dashboard/transactions");
+      if (!response.ok) {
+        throw new Error(data.error || "Gagal membuat transaksi");
+      }
+
+      // Open Snap Popup
+      window.snap.pay(data.token, {
+        onSuccess: function (result: any) {
+          toast.success("Pembayaran berhasil!");
+          router.push("/user-dashboard/transactions");
+        },
+        onPending: function (result: any) {
+          toast.info("Menunggu pembayaran...");
+          router.push("/user-dashboard/transactions");
+        },
+        onError: function (result: any) {
+          toast.error("Pembayaran gagal!");
+          console.error(result);
+        },
+        onClose: function () {
+          toast.warning(
+            "Anda menutup popup pembayaran sebelum menyelesaikan pembayaran"
+          );
+        },
+      });
     } catch (error: any) {
       toast.error(error.message || "Terjadi kesalahan saat mengajukan sewa");
     } finally {
@@ -144,6 +185,11 @@ export default function RentPage({ params }: RentPageProps) {
 
   return (
     <div className="container max-w-2xl mx-auto py-8 px-4">
+      <Script
+        src="https://app.sandbox.midtrans.com/snap/snap.js"
+        data-client-key={process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY}
+        strategy="lazyOnload"
+      />
       <div className="mb-6">
         <Button variant="ghost" asChild className="pl-0 hover:bg-transparent">
           <Link
