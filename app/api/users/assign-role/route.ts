@@ -36,9 +36,9 @@ export async function POST(request: Request) {
       );
     }
 
-    // Insert role ke user_roles (jika belum ada)
+    // Insert role ke user_role (jika belum ada)
     const { error: insertError } = await supabase
-      .from("user_roles")
+      .from("user_role")
       .insert({
         user_id: user.id,
         role_id: roleData.id,

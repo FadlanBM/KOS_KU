@@ -43,13 +43,16 @@ export async function signUpWithEmail(
   options?: {
     data?: Record<string, any>;
     redirectTo?: string;
+    phone?: string;
   }
 ) {
   const supabase = createClient();
+  const { phone, ...otherOptions } = options || {};
   return await supabase.auth.signUp({
     email,
     password,
-    options,
+    phone,
+    options: otherOptions,
   });
 }
 

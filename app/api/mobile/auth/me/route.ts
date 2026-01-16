@@ -17,11 +17,12 @@ import { createClient } from "@supabase/supabase-js";
  *       "email": "user@example.com",
  *       "name": "User Name",
  *       "phone": "+628123456789",
- *       "avatar_url": "https://..."
+ *       "avatar_url": "https://...",
+ *       "email_verified": true
  *     },
- *     "roles": ["user"],
+ *     "roles": ["penyewa"],
  *     "isAdmin": false,
- *     "isUser": true
+ *     "isPenyewa": true
  *   }
  * }
  */
@@ -33,7 +34,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: "Unauthorized: Token tidak ditemukan. Sertakan header Authorization: Bearer <token>",
+          error:
+            "Unauthorized: Token tidak ditemukan. Sertakan header Authorization: Bearer <token>",
         },
         { status: 401 }
       );
@@ -41,7 +43,8 @@ export async function GET(request: NextRequest) {
 
     const token = authHeader.split(" ")[1];
 
-    // 2. Validasi token dengan Supabase dan buat client yang terautentikasi
+    // 2. Buat Supabase client manual dengan token dari header
+    // Ini diperlukan agar Supabase mengenali user berdasarkan JWT yang dikirim mobile
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -58,7 +61,7 @@ export async function GET(request: NextRequest) {
     const {
       data: { user },
       error: authError,
-    } = await supabase.auth.getUser();
+    } = await supabase.auth.getUser(token);
 
     if (authError || !user) {
       return NextResponse.json(
@@ -73,72 +76,42 @@ export async function GET(request: NextRequest) {
     // 4. Ambil informasi role user
     const userId = user.id;
 
-    // Query roles
-    const { data: rolesData, error: rolesError } = await supabase
-      .from("user_roles")
+    // Query semua roles user dalam satu request
+    const { data: rolesData } = await supabase
+      .from("user_role")
       .select(
         `
-        roles(name)
+        roles!inner(name)
       `
       )
       .eq("user_id", userId);
 
-    const roles =
-      rolesData && !rolesError
-        ? rolesData.map((item: any) => item.roles.name)
-        : [];
+    const roles = rolesData
+      ? rolesData.map((item: any) => item.roles.name)
+      : [];
 
-    // Check admin role
-    const { data: adminData } = await supabase
-      .from("user_roles")
-      .select(
-        `
-        role_id,
-        roles!inner(name)
-      `
-      )
-      .eq("user_id", userId)
-      .eq("roles.name", "admin")
-      .maybeSingle();
+    const userIsAdmin = roles.includes("admin");
+    const userIsPemilik = roles.includes("pemilik");
+    const userIsPenyewa = roles.includes("penyewa") || roles.includes("user");
 
-    const userIsAdmin = !!adminData;
-
-    // Check user role
-    const { data: userData } = await supabase
-      .from("user_roles")
-      .select(
-        `
-        role_id,
-        roles!inner(name)
-      `
-      )
-      .eq("user_id", userId)
-      .eq("roles.name", "user")
-      .maybeSingle();
-
-    const userIsUser = !!userData;
-
-    // 5. Siapkan response data
-    const responseData = {
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.user_metadata?.name || null,
-        phone: user.phone || null,
-        avatar_url: user.user_metadata?.avatar_url || null,
-        email_verified: user.email_confirmed_at !== null,
-        created_at: user.created_at,
-        updated_at: user.updated_at,
-      },
-      roles,
-      isAdmin: userIsAdmin,
-      isUser: userIsUser,
-    };
-
+    // 5. Response
     return NextResponse.json(
       {
         success: true,
-        data: responseData,
+        data: {
+          user: {
+            id: user.id,
+            email: user.email,
+            name: user.user_metadata?.name || null,
+            phone: user.phone || null,
+            avatar_url: user.user_metadata?.avatar_url || null,
+            email_verified: user.email_confirmed_at !== null,
+          },
+          roles,
+          isAdmin: userIsAdmin,
+          isPemilik: userIsPemilik,
+          isPenyewa: userIsPenyewa,
+        },
       },
       { status: 200 }
     );
@@ -166,4 +139,3 @@ export async function POST() {
     { status: 405 }
   );
 }
-

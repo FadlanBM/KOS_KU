@@ -12,7 +12,7 @@ export async function isAdmin(userId: string): Promise<boolean> {
     // Query untuk check apakah user memiliki role "admin"
     // Menggunakan join untuk mendapatkan role name
     const { data, error } = await supabase
-      .from("user_roles")
+      .from("user_role")
       .select(`
         role_id,
         roles!inner(name)
@@ -34,6 +34,38 @@ export async function isAdmin(userId: string): Promise<boolean> {
 }
 
 /**
+ * Check if user has pemilik role
+ * @param userId - User ID to check
+ * @returns true if user is pemilik, false otherwise
+ */
+export async function isPemilik(userId: string): Promise<boolean> {
+  const supabase = await createClient();
+
+  try {
+    // Query untuk check apakah user memiliki role "pemilik"
+    const { data, error } = await supabase
+      .from("user_role")
+      .select(`
+        role_id,
+        roles!inner(name)
+      `)
+      .eq("user_id", userId)
+      .eq("roles.name", "pemilik")
+      .maybeSingle();
+
+    if (error) {
+      console.error("Error checking pemilik role:", error);
+      return false;
+    }
+
+    return !!data;
+  } catch (error) {
+    console.error("Unexpected error checking pemilik role:", error);
+    return false;
+  }
+}
+
+/**
  * Check if user has user role
  * @param userId - User ID to check
  * @returns true if user has user role, false otherwise
@@ -44,7 +76,7 @@ export async function isUser(userId: string): Promise<boolean> {
   try {
     // Query untuk check apakah user memiliki role "user"
     const { data, error } = await supabase
-      .from("user_roles")
+      .from("user_role")
       .select(`
         role_id,
         roles!inner(name)
@@ -74,7 +106,7 @@ export async function getUserRoles(userId: string): Promise<string[]> {
   const supabase = await createClient();
 
   const { data, error } = await supabase
-    .from("user_roles")
+    .from("user_role")
     .select(`
       roles(name)
     `)

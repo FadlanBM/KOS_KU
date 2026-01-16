@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { KosCard, type KosData } from "./kos-card";
 import { createClient } from "@/lib/supabase/client";
 import { getUser } from "@/lib/supabase";
+import { toast } from "sonner";
 
 interface KosListProps {
   kosList: KosData[];
@@ -13,30 +14,19 @@ interface KosListProps {
 export function KosList({ kosList }: KosListProps) {
   const router = useRouter();
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
   const handleEdit = (id: string) => {
     router.push(`/kos/edit/${id}`);
   };
 
   const handleDelete = async (id: string) => {
-    // Konfirmasi sebelum delete
-    const confirmed = window.confirm(
-      "Apakah Anda yakin ingin menghapus kos ini? Tindakan ini tidak dapat dibatalkan."
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
     setDeletingId(id);
-    setError(null);
 
     try {
       // Get current user untuk validasi
       const user = await getUser();
       if (!user) {
-        setError("Anda harus login untuk menghapus kos.");
+        toast.error("Anda harus login untuk menghapus kos.");
         setDeletingId(null);
         router.push("/login");
         return;
@@ -45,7 +35,38 @@ export function KosList({ kosList }: KosListProps) {
       // Create Supabase client
       const supabase = createClient();
 
-      // Delete dari Supabase
+      // 1. Ambil daftar gambar kos untuk dihapus dari storage
+      const { data: images } = await supabase
+        .from("gambar_kos")
+        .select("name_image, tipe_gambar(name)")
+        .eq("kos_id", id);
+
+      if (images && images.length > 0) {
+        const filesToDelete = images
+          .map((img: any) => {
+            if (img.name_image && img.tipe_gambar?.name) {
+              return `${img.tipe_gambar.name}/${img.name_image}`;
+            }
+            return null;
+          })
+          .filter((path): path is string => path !== null);
+
+        if (filesToDelete.length > 0) {
+          try {
+            const { error: storageError } = await supabase.storage
+              .from("profile_photos")
+              .remove(filesToDelete);
+            if (storageError) {
+              console.error("Error removing files from bucket:", storageError);
+            }
+          } catch (err) {
+            console.error("Unexpected error deleting from storage:", err);
+          }
+        }
+      }
+
+      // 2. Delete dari Supabase (kos)
+      // Tabel gambar_kos akan terhapus otomatis karena ON DELETE CASCADE di database
       const { error: deleteError } = await supabase
         .from("kos")
         .delete()
@@ -54,18 +75,20 @@ export function KosList({ kosList }: KosListProps) {
 
       if (deleteError) {
         console.error("Error deleting kos:", deleteError);
-        setError(
+        toast.error(
           deleteError.message || "Gagal menghapus kos. Silakan coba lagi."
         );
         setDeletingId(null);
         return;
       }
 
+      toast.success("Kos berhasil dihapus");
       // Refresh halaman untuk menampilkan data terbaru
       router.refresh();
     } catch (err) {
       console.error("Unexpected error deleting kos:", err);
-      setError("Terjadi kesalahan saat menghapus kos. Silakan coba lagi.");
+      toast.error("Terjadi kesalahan saat menghapus kos. Silakan coba lagi.");
+    } finally {
       setDeletingId(null);
     }
   };
@@ -75,24 +98,16 @@ export function KosList({ kosList }: KosListProps) {
   }
 
   return (
-    <>
-      {error && (
-        <div className="rounded-md bg-red-50 p-4 dark:bg-red-950 mb-6">
-          <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
-        </div>
-      )}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {kosList.map((kos) => (
-          <KosCard
-            key={kos.id}
-            kos={kos}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-            isDeleting={deletingId === kos.id}
-          />
-        ))}
-      </div>
-    </>
+    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      {kosList.map((kos) => (
+        <KosCard
+          key={kos.id}
+          kos={kos}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          isDeleting={deletingId === kos.id}
+        />
+      ))}
+    </div>
   );
 }
-

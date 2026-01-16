@@ -3,18 +3,69 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { signInWithEmail } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/client";
 
-export default function LoginPage() {
+export default function PemilikLoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const supabase = createClient();
+
+  const resolveNextStepAndRedirect = async (userId: string) => {
+    // Step 1: Profile
+    const { data: profile } = await supabase
+      .from("profile_penyedia")
+      .select("user_id")
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (!profile) {
+      router.push("/register/complete-profile");
+      return;
+    }
+    
+    // Step 2: KTP
+    const { data: ktp } = await supabase
+      .from("penyedia_ktp")
+      .select("id")
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (!ktp) {
+      router.push("/register/verify-ktp");
+      return;
+    }
+    
+    // Step 3: NPWP
+    const { data: npwp } = await supabase
+      .from("penyedia_npwp")
+      .select("id")
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (!npwp) {
+      router.push("/register/verify-npwp");
+      return;
+    }
+    
+    // Step 4: Bank
+    const { data: bank } = await supabase
+      .from("penyedia_bank")
+      .select("id")
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (!bank) {
+      router.push("/register/add-bank");
+      return;
+    }
+
+    // All steps done -> Dashboard
+    router.push("/dashboard");
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -28,7 +79,7 @@ export default function LoginPage() {
       );
 
       if (signInError) {
-        setError(signInError.message);
+        setError("Email atau password salah");
         setLoading(false);
         return;
       }
@@ -39,21 +90,16 @@ export default function LoginPage() {
           const response = await fetch("/api/users/check-role");
           const roleData = await response.json();
 
-          if (roleData.isAdmin) {
-            setError(
-              "Akun Admin tidak dapat login di sini. Silakan gunakan halaman Login Admin."
-            );
-            setLoading(false);
-            return;
+          if (roleData.isPemilik) {
+            await resolveNextStepAndRedirect(data.user.id);
           } else {
-            router.push("/user-dashboard?login=success");
+            setError("Akun ini bukan akun Pemilik.");
+            setLoading(false);
           }
         } catch (error) {
-          console.log("Error checking role:", error);
-          router.push("/?login=success");
+          console.error("Error checking role:", error);
+          await resolveNextStepAndRedirect(data.user.id); // Fallback to step resolution
         }
-
-        router.refresh();
       }
     } catch {
       setError("Terjadi kesalahan saat login. Silakan coba lagi.");
@@ -74,81 +120,63 @@ export default function LoginPage() {
         </div>
         <div className="flex flex-1 items-center justify-center">
           <div className="w-full max-w-xs">
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-2xl font-bold tracking-tight">
-                  Masuk ke akun Anda
-                </h2>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Atau{" "}
-                  <Link
-                    href="/register"
-                    className="font-medium text-primary hover:text-primary/80"
-                  >
-                    buat akun baru
-                  </Link>
+            <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+              <div className="flex flex-col items-center gap-2 text-center">
+                <h1 className="text-2xl font-bold">Login Pemilik</h1>
+                <p className="text-balance text-sm text-muted-foreground">
+                  Masukkan email dan password pemilik Anda
                 </p>
               </div>
-
-              <form className="space-y-4" onSubmit={handleSubmit}>
-                {error && (
-                  <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">
-                    {error}
-                  </div>
-                )}
-                <div className="space-y-2">
+              <div className="grid gap-4">
+                <div className="grid gap-2">
                   <Label htmlFor="email">Email</Label>
                   <Input
                     id="email"
-                    name="email"
                     type="email"
-                    autoComplete="email"
+                    placeholder="pemilik@example.com"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="nama@example.com"
                   />
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
+                <div className="grid gap-2">
+                  <div className="flex items-center">
+                    <Label htmlFor="password">Password</Label>
+                  </div>
                   <Input
                     id="password"
-                    name="password"
                     type="password"
-                    autoComplete="current-password"
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
                   />
                 </div>
-
+                {error && <p className="text-sm text-red-500">{error}</p>}
                 <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? "Masuk..." : "Masuk"}
+                  {loading ? "Memproses..." : "Login Pemilik"}
                 </Button>
-
-                <div className="text-center">
-                  <Link
-                    href="/forgot-password"
-                    className="text-sm text-primary hover:text-primary/80"
-                  >
-                    Lupa password?
-                  </Link>
-                </div>
-              </form>
-            </div>
+              </div>
+              <div className="text-center text-sm">
+                Belum punya akun pemilik?{" "}
+                <Link
+                  href="/manage-register"
+                  className="underline underline-offset-4"
+                >
+                  Daftar di sini
+                </Link>
+              </div>
+            </form>
           </div>
         </div>
       </div>
-      <div className="bg-muted relative hidden lg:block">
-        <Image
-          src="/images/login-prev.jpg"
-          alt="Login background"
-          fill
-          className="object-cover dark:brightness-[0.2] dark:grayscale"
-          priority
-        />
+      <div className="relative hidden bg-muted lg:block">
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-primary p-12 text-primary-foreground">
+          <h2 className="text-3xl font-bold mb-4">Pemilik Access</h2>
+          <p className="text-center text-lg opacity-90">
+            Masuk untuk mengelola seluruh ekosistem properti kos Anda dengan
+            efisien dan aman.
+          </p>
+        </div>
       </div>
     </div>
   );

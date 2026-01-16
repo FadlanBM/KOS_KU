@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { createClient } from "@/lib/supabase/server";
 import { z } from "zod";
 
 const registerSchema = z
@@ -74,12 +74,7 @@ export async function POST(request: NextRequest) {
 
     const { email, password, name } = validationResult.data;
 
-    // Buat Supabase client untuk registrasi
-    // Menggunakan createClient langsung tanpa cookies untuk mobile
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
+    const supabase = await createClient();
 
     // Lakukan registrasi dengan email dan password
     const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -112,100 +107,40 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Jika email confirmation diperlukan, Supabase mungkin tidak langsung memberikan session
-    // Tapi jika email confirmation tidak diperlukan, session akan langsung tersedia
-    if (!authData.session) {
-      // Jika tidak ada session, berarti email confirmation diperlukan
+    const { data: roleData, error: roleError } = await supabase
+      .from("roles")
+      .select("id")
+      .eq("name", "penyewa")
+      .single();
+
+    if (roleError || !roleData) {
+      console.error(`Error fetching role penyewa:`, roleError);
       return NextResponse.json(
-        {
-          success: true,
-          message:
-            "Registrasi berhasil. Silakan cek email Anda untuk verifikasi.",
-          data: {
-            user: {
-              id: authData.user.id,
-              email: authData.user.email,
-              name: authData.user.user_metadata?.name || null,
-              phone: authData.user.phone || null,
-              avatar_url: authData.user.user_metadata?.avatar_url || null,
-              email_verified: false,
-            },
-            requiresEmailConfirmation: true,
-          },
-        },
-        { status: 200 }
+        { error: `Role penyewa not found` },
+        { status: 500 }
       );
     }
 
-    // Jika session tersedia, berarti user langsung terautentikasi
-    // Buat Supabase client yang sudah terautentikasi untuk query roles
-    const authenticatedSupabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        global: {
-          headers: {
-            Authorization: `Bearer ${authData.session.access_token}`,
-          },
-        },
+    // Insert role ke user_role
+    const { error: insertError } = await supabase.from("user_role").insert({
+      user_id: authData.user.id,
+      role_id: roleData.id,
+    });
+
+    if (insertError) {
+      // Check jika error karena duplicate (sudah ada)
+      if (insertError.code === "23505") {
+        return NextResponse.json(
+          { message: `Role penyewa already assigned` },
+          { status: 200 }
+        );
       }
-    );
-
-    // Ambil informasi role user menggunakan authenticated client
-    // Role "user" akan otomatis di-assign oleh database trigger
-    const userId = authData.user.id;
-
-    // Tunggu sebentar untuk memastikan trigger sudah selesai
-    // (biasanya trigger berjalan sangat cepat, tapi kita beri sedikit delay)
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
-    // Query roles
-    const { data: rolesData, error: rolesError } = await authenticatedSupabase
-      .from("user_roles")
-      .select(
-        `
-        roles(name)
-      `
-      )
-      .eq("user_id", userId);
-
-    const roles =
-      rolesData && !rolesError
-        ? rolesData.map(
-            (item: Record<string, unknown>) =>
-              (item.roles as { name: string }).name
-          )
-        : [];
-
-    // Check admin role
-    const { data: adminData } = await authenticatedSupabase
-      .from("user_roles")
-      .select(
-        `
-        role_id,
-        roles!inner(name)
-      `
-      )
-      .eq("user_id", userId)
-      .eq("roles.name", "admin")
-      .maybeSingle();
-
-    const userIsAdmin = !!adminData;
-
-    // Check user role
-    const { data: userData } = await authenticatedSupabase
-      .from("user_roles")
-      .select(
-        `
-        role_id,
-        roles!inner(name)
-      `
-      )
-      .eq("user_id", userId)
-      .eq("roles.name", "user")
-      .maybeSingle();
-
-    const userIsUser = !!userData;
+      console.error(`Error assigning role penyewa:`, insertError);
+      return NextResponse.json(
+        { error: `Failed to assign role penyewa` },
+        { status: 500 }
+      );
+    }
 
     // Siapkan response data
     const responseData = {
@@ -216,15 +151,9 @@ export async function POST(request: NextRequest) {
         phone: authData.user.phone || null,
         avatar_url: authData.user.user_metadata?.avatar_url || null,
         email_verified: authData.user.email_confirmed_at !== null,
+        created_at: authData.user.created_at,
+        updated_at: authData.user.updated_at,
       },
-      access_token: authData.session.access_token,
-      refresh_token: authData.session.refresh_token,
-      expires_in: authData.session.expires_in || 3600,
-      expires_at: authData.session.expires_at,
-      token_type: authData.session.token_type,
-      roles,
-      isAdmin: userIsAdmin,
-      isUser: userIsUser,
     };
 
     return NextResponse.json(

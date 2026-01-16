@@ -33,15 +33,40 @@ export default async function KosPage() {
   const kosList: KosData[] =
     kosData?.map((kos) => ({
       id: kos.id,
+      userId: kos.user_id,
       name: kos.name,
       address: kos.address,
-      city: kos.city,
-      price: kos.price,
-      roomType: kos.room_type, // room_type -> roomType
-      facilities: kos.facilities || "",
+      location:
+        typeof kos.location === "object" && kos.location !== null
+          ? (kos.location as any).text || ""
+          : kos.location || "",
       description: kos.description || "",
-      availableRooms: kos.available_rooms, // available_rooms -> availableRooms
-      totalRooms: kos.total_rooms, // total_rooms -> totalRooms
+      genderType: kos.gender_type,
+      availableRooms: kos.available_rooms,
+      totalRooms: kos.total_rooms,
+      monthlyPrice: kos.monthly_price,
+      yearlyPrice: kos.yearly_price,
+      depositPrice: kos.deposit_price,
+      adminFee: kos.admin_fee,
+      electricityType: kos.electricity_type,
+      waterType: kos.water_type,
+      minStayDuration: kos.min_stay_duration,
+      roomSize: kos.room_size,
+      certificateType: kos.certificate_type,
+      yearBuilt: kos.year_built,
+      buildingFloors: kos.building_floors,
+      propertyStatus: kos.property_status,
+      isFeatured: kos.is_featured,
+      viewCount: kos.view_count,
+      ratingAverage: kos.rating_average,
+      totalReviews: kos.total_reviews,
+      nearestCampus: kos.nearest_campus,
+      distanceToCampus: kos.distance_to_campus,
+      fasilitas_kos: kos.fasilitas_kos,
+      fasilitas_kamar: kos.fasilitas_kamar,
+      fasilitas_kamar_mandi: kos.fasilitas_kamar_mandi,
+      fasilitas_parkir: kos.fasilitas_parkir,
+      peraturan_kos: kos.peraturan_kos,
     })) || [];
 
   return (

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { createClient } from "@/lib/supabase/server";
 import { z } from "zod";
 
 const loginSchema = z.object({
@@ -64,11 +64,7 @@ export async function POST(request: NextRequest) {
     const { email, password } = validationResult.data;
 
     // Buat Supabase client untuk autentikasi mobile
-    // Menggunakan createClient langsung tanpa cookies untuk mobile
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
+    const supabase = await createClient();
 
     // Lakukan autentikasi dengan email dan password
     const { data: authData, error: authError } =
@@ -97,40 +93,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Buat Supabase client yang sudah terautentikasi untuk query roles
-    const authenticatedSupabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        global: {
-          headers: {
-            Authorization: `Bearer ${authData.session.access_token}`,
-          },
-        },
-      }
-    );
-
-    // Ambil informasi role user menggunakan authenticated client
     const userId = authData.user.id;
 
-    // Query roles
-    const { data: rolesData, error: rolesError } = await authenticatedSupabase
-      .from("user_roles")
-      .select(
-        `
-        roles(name)
-      `
-      )
-      .eq("user_id", userId);
-
-    const roles =
-      rolesData && !rolesError
-        ? rolesData.map((item: any) => item.roles.name)
-        : [];
-
-    // Check admin role
-    const { data: adminData } = await authenticatedSupabase
-      .from("user_roles")
+    // VALIDASI ROLE: Hanya 'penyewa' yang boleh login melalui mobile
+    // Kita gunakan client yang sudah terautentikasi untuk pengecekan role jika RLS aktif
+    const { data: roleData, error: roleError } = await supabase
+      .from("user_role")
       .select(
         `
         role_id,
@@ -138,25 +106,22 @@ export async function POST(request: NextRequest) {
       `
       )
       .eq("user_id", userId)
-      .eq("roles.name", "admin")
+      .eq("roles.name", "penyewa")
       .maybeSingle();
 
-    const userIsAdmin = !!adminData;
+    if (roleError || !roleData) {
+      // Jika bukan role 'penyewa', kita sign out session yang baru dibuat
+      await supabase.auth.signOut();
 
-    // Check user role
-    const { data: userData } = await authenticatedSupabase
-      .from("user_roles")
-      .select(
-        `
-        role_id,
-        roles!inner(name)
-      `
-      )
-      .eq("user_id", userId)
-      .eq("roles.name", "user")
-      .maybeSingle();
-
-    const userIsUser = !!userData;
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Akses ditolak: Hanya akun Penyewa yang dapat login melalui aplikasi ini.",
+        },
+        { status: 403 }
+      );
+    }
 
     // Siapkan response data
     const responseData = {
@@ -172,9 +137,10 @@ export async function POST(request: NextRequest) {
       expires_in: authData.session.expires_in || 3600,
       expires_at: authData.session.expires_at,
       token_type: authData.session.token_type,
-      roles,
-      isAdmin: userIsAdmin,
-      isUser: userIsUser,
+      roles: ["penyewa"],
+      isPenyewa: true,
+      isAdmin: false,
+      isPemilik: false,
     };
 
     return NextResponse.json(

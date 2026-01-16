@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { MobileDashboardWrapper } from "@/components/layout/dashboard/mobile-wrapper";
-import { isAdmin } from "@/lib/supabase/roles";
+import { isAdmin, isPemilik } from "@/lib/supabase/roles";
 
 export default async function DashboardLayout({
   children,
@@ -18,10 +18,13 @@ export default async function DashboardLayout({
     redirect("/login");
   }
 
-  // Check if user has admin role
-  const userIsAdmin = await isAdmin(user.id);
+  // Check if user has admin or pemilik role
+  const [userIsAdmin, userIsPemilik] = await Promise.all([
+    isAdmin(user.id),
+    isPemilik(user.id),
+  ]);
 
-  if (!userIsAdmin) {
+  if (!userIsAdmin && !userIsPemilik) {
     redirect("/unauthorized");
   }
 

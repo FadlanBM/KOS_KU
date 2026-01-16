@@ -26,15 +26,37 @@ import {
 
 export interface KosData {
   id: string;
+  userId: string;
   name: string;
   address: string;
-  city: string;
-  price: number;
-  roomType: string;
-  facilities: string;
+  location: string;
   description: string;
+  genderType: string;
   availableRooms: number;
   totalRooms: number;
+  monthlyPrice: number;
+  yearlyPrice?: number;
+  depositPrice?: number;
+  adminFee?: number;
+  electricityType?: string;
+  waterType?: string;
+  minStayDuration?: string;
+  roomSize?: string;
+  certificateType?: string;
+  yearBuilt?: number;
+  buildingFloors?: number;
+  propertyStatus: string;
+  isFeatured: boolean;
+  viewCount: number;
+  ratingAverage: number;
+  totalReviews: number;
+  nearestCampus?: string;
+  distanceToCampus?: string;
+  fasilitas_kos?: string;
+  fasilitas_kamar?: string;
+  fasilitas_kamar_mandi?: string;
+  fasilitas_parkir?: string;
+  peraturan_kos?: string;
 }
 
 interface KosCardProps {
@@ -85,19 +107,28 @@ export function KosCard({
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <MapPin className="size-4" />
               <span>
-                {kos.address}, {kos.city}
+                {kos.address},{" "}
+                {typeof kos.location === "object"
+                  ? (kos.location as any).text
+                  : kos.location}
               </span>
             </div>
 
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Home className="size-4" />
-              <span>{kos.roomType}</span>
+              <span>
+                {kos.genderType === "male"
+                  ? "Putra"
+                  : kos.genderType === "female"
+                  ? "Putri"
+                  : "Campur"}
+              </span>
             </div>
 
             <div className="flex items-center gap-2 text-sm font-medium">
               <DollarSign className="size-4" />
               <span className="text-primary">
-                {formatPrice(kos.price)}/bulan
+                {formatPrice(kos.monthlyPrice)}/bulan
               </span>
             </div>
 
@@ -109,12 +140,29 @@ export function KosCard({
             </div>
           </div>
 
-          {kos.facilities && (
+          {kos.fasilitas_kos && (
             <div className="mb-4">
               <p className="text-xs font-medium text-muted-foreground mb-1">
-                Fasilitas:
+                Fasilitas Utama:
               </p>
-              <p className="text-sm">{kos.facilities}</p>
+              <div className="flex flex-wrap gap-1">
+                {kos.fasilitas_kos
+                  .split("|")
+                  .slice(0, 3)
+                  .map((f, i) => (
+                    <span
+                      key={i}
+                      className="bg-muted px-2 py-0.5 rounded text-[10px]"
+                    >
+                      {f}
+                    </span>
+                  ))}
+                {kos.fasilitas_kos.split("|").length > 3 && (
+                  <span className="text-[10px] text-muted-foreground">
+                    +{kos.fasilitas_kos.split("|").length - 3} lainnya
+                  </span>
+                )}
+              </div>
             </div>
           )}
 

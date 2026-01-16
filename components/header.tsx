@@ -19,7 +19,7 @@ export const HeroHeader = () => {
   const [menuState, setMenuState] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [userRole, setUserRole] = useState<"admin" | "user" | null>(null);
+  const [userRole, setUserRole] = useState<"admin" | "pemilik" | "user" | null>(null);
 
   const fetchUserRole = useCallback(async () => {
     try {
@@ -28,6 +28,8 @@ export const HeroHeader = () => {
         const data = await response.json();
         if (data.isAdmin) {
           setUserRole("admin");
+        } else if (data.isPemilik) {
+          setUserRole("pemilik");
         } else if (data.isUser) {
           setUserRole("user");
         } else {
