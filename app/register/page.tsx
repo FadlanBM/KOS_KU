@@ -177,6 +177,12 @@ export default function PemilikRegisterPage() {
                   {loading ? "Mendaftar..." : "Daftar sebagai Pemilik"}
                 </Button>
               </div>
+              <div className="text-center text-sm">
+                sudah punya akun pemilik?{" "}
+                <Link href="/login" className="underline underline-offset-4">
+                  Masuk di sini
+                </Link>
+              </div>
             </form>
           </div>
         </div>

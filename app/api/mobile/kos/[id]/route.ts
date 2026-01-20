@@ -1,5 +1,5 @@
+import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
 
 /**
  * API endpoint untuk mendapatkan detail kos berdasarkan ID
@@ -22,32 +22,11 @@ export async function GET(
       );
     }
 
-    // Inisialisasi Supabase client
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
+    const supabase = await createClient();
 
-    // Query untuk mengambil detail kos beserta gambar lengkap dan info pemilik
     const { data, error } = await supabase
       .from("kos")
-      .select(
-        `
-        *,
-        gambar_kos (
-          id,
-          url_gambar,
-          tipe_gambar (
-            id,
-            name
-          )
-        ),
-        user:user_id (
-          email,
-          raw_user_meta_data
-        )
-      `
-      )
+      .select("*, gambar_kos(*, tipe_gambar(*))")
       .eq("id", id)
       .single();
 
@@ -74,16 +53,18 @@ export async function GET(
 
     // Tambahkan increment view count secara background (optional, non-blocking)
     // Kita biarkan berjalan asynchronous tanpa await agar response cepat
-    supabase.rpc("increment_kos_view_count", { kos_id: id }).then(({ error }) => {
+    supabase
+      .rpc("increment_kos_view_count", { kos_id: id })
+      .then(({ error }) => {
         if (error) {
-            // Fallback manual update jika RPC tidak ada
-            supabase
+          // Fallback manual update jika RPC tidak ada
+          supabase
             .from("kos")
             .update({ view_count: (data.view_count || 0) + 1 })
             .eq("id", id)
             .then();
         }
-    });
+      });
 
     return NextResponse.json(
       {

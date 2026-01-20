@@ -6,9 +6,8 @@ import { z } from "zod";
 const profilePenyewaSchema = z.object({
   full_name: z.string().min(1, "Nama lengkap harus diisi"),
   phone_number: z.string().min(1, "Nomor telepon harus diisi"),
-  gender: z.enum(["male", "female"], {
-    invalid_type_error: "Jenis kelamin harus male atau female",
-    required_error: "Jenis kelamin harus diisi",
+  gender: z.enum(["male", "female"] as const, {
+    message: "Jenis kelamin harus male atau female",
   }),
   date_of_birth: z.string().refine((val) => !isNaN(Date.parse(val)), {
     message: "Format tanggal lahir tidak valid",

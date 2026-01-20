@@ -1,5 +1,5 @@
+import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
 
 /**
  * API endpoint untuk mendapatkan daftar kos
@@ -21,14 +21,13 @@ export async function GET(request: NextRequest) {
     const maxPrice = searchParams.get("max_price");
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "10");
+    const likedOnly = searchParams.get("liked") === "true";
 
-    // Hitung offset berdasarkan page jika offset tidak disediakan secara eksplisit
     let offset = parseInt(searchParams.get("offset") || "0");
     if (!searchParams.has("offset") && page > 0) {
       offset = (page - 1) * limit;
     }
 
-    // Validasi token autentikasi
     const authHeader = request.headers.get("Authorization");
     const token = authHeader?.split(" ")[1];
 
@@ -42,20 +41,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Inisialisasi Supabase client dengan token
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        global: {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      }
-    );
+    const supabase = await createClient();
 
-    // Verifikasi user
     const {
       data: { user },
       error: authError,
@@ -71,43 +58,138 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Query dasar untuk mengambil data kos beserta gambar
-    // Kita join dengan gambar_kos dan tipe_gambar
-    // Gunakan { count: 'exact' } untuk mendapatkan total data untuk pagination
-    let query = supabase
-      .from("kos")
-      .select(
-        `
-        *,
-        gambar_kos (
-          id,
-          url_gambar,
-          tipe_gambar (
-            id,
-            name
-          )
-        )
-      `,
-        { count: "exact" }
-      )
-      .eq("property_status", "active") // Hanya tampilkan kos aktif
-      .order("created_at", { ascending: false })
-      .range(offset, offset + limit - 1);
+    let likedKosIds: string[] = [];
 
-    // Terapkan filter jika ada parameter
+    if (likedOnly) {
+      const { data: userLikes, error: likesError } = await supabase
+        .from("user_likes")
+        .select("kos_id")
+        .eq("user_id", user.id);
+
+      if (likesError) {
+        console.error("Error fetching user likes:", likesError);
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Gagal mengambil data like pengguna",
+          },
+          { status: 500 }
+        );
+      }
+
+      likedKosIds = userLikes?.map((like) => like.kos_id) ?? [];
+
+      if (likedKosIds.length === 0) {
+        const totalRecords = 0;
+        const totalPages = 0;
+        const currentPage = Math.floor(offset / limit) + 1;
+        const nextPage = null;
+        const prevPage = currentPage > 1 ? currentPage - 1 : null;
+
+        return NextResponse.json(
+          {
+            success: true,
+            data: [],
+            pagination: {
+              total_records: totalRecords,
+              total_pages: totalPages,
+              current_page: currentPage,
+              next_page: nextPage,
+              prev_page: prevPage,
+              limit: limit,
+            },
+          },
+          { status: 200 }
+        );
+      }
+    }
+
+    let countQuery = supabase
+      .from("kos")
+      .select("*", { count: "exact", head: true })
+      .eq("property_status", "active");
+
     if (search) {
-      query = query.or(`name.ilike.%${search}%,address.ilike.%${search}%`);
+      countQuery = countQuery.or(
+        `name.ilike.%${search}%,address.ilike.%${search}%`
+      );
     }
 
     if (minPrice) {
-      query = query.gte("monthly_price", minPrice);
+      countQuery = countQuery.gte("monthly_price", minPrice);
     }
 
     if (maxPrice) {
-      query = query.lte("monthly_price", maxPrice);
+      countQuery = countQuery.lte("monthly_price", maxPrice);
     }
 
-    const { data, error, count } = await query;
+    if (likedOnly && likedKosIds.length > 0) {
+      countQuery = countQuery.in("id", likedKosIds);
+    }
+
+    const { count, error: countError } = await countQuery;
+
+    if (countError) {
+      console.error("Error counting kos:", countError);
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Gagal menghitung data kos",
+        },
+        { status: 500 }
+      );
+    }
+
+    const totalRecords = count || 0;
+    const totalPages = Math.ceil(totalRecords / limit);
+    const currentPage = Math.floor(offset / limit) + 1;
+    const nextPage = currentPage < totalPages ? currentPage + 1 : null;
+    const prevPage = currentPage > 1 ? currentPage - 1 : null;
+
+    if (offset >= totalRecords) {
+      return NextResponse.json(
+        {
+          success: true,
+          data: [],
+          pagination: {
+            total_records: totalRecords,
+            total_pages: totalPages,
+            current_page: currentPage,
+            next_page: nextPage,
+            prev_page: prevPage,
+            limit: limit,
+          },
+        },
+        { status: 200 }
+      );
+    }
+
+    let dataQuery = supabase
+      .from("kos")
+      .select("*, gambar_kos(*, tipe_gambar(*))")
+      .eq("property_status", "active")
+      .order("created_at", { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (search) {
+      dataQuery = dataQuery.or(
+        `name.ilike.%${search}%,address.ilike.%${search}%`
+      );
+    }
+
+    if (minPrice) {
+      dataQuery = dataQuery.gte("monthly_price", minPrice);
+    }
+
+    if (maxPrice) {
+      dataQuery = dataQuery.lte("monthly_price", maxPrice);
+    }
+
+    if (likedOnly && likedKosIds.length > 0) {
+      dataQuery = dataQuery.in("id", likedKosIds);
+    }
+
+    const { data, error } = await dataQuery;
 
     if (error) {
       console.error("Error fetching kos:", error);
@@ -120,16 +202,10 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const totalRecords = count || 0;
-    const totalPages = Math.ceil(totalRecords / limit);
-    const currentPage = Math.floor(offset / limit) + 1;
-    const nextPage = currentPage < totalPages ? currentPage + 1 : null;
-    const prevPage = currentPage > 1 ? currentPage - 1 : null;
-
     return NextResponse.json(
       {
         success: true,
-        data: data,
+        data: data || [],
         pagination: {
           total_records: totalRecords,
           total_pages: totalPages,

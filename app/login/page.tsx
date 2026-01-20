@@ -29,7 +29,7 @@ export default function PemilikLoginPage() {
       router.push("/register/complete-profile");
       return;
     }
-    
+
     // Step 2: KTP
     const { data: ktp } = await supabase
       .from("penyedia_ktp")
@@ -40,7 +40,7 @@ export default function PemilikLoginPage() {
       router.push("/register/verify-ktp");
       return;
     }
-    
+
     // Step 3: NPWP
     const { data: npwp } = await supabase
       .from("penyedia_npwp")
@@ -51,7 +51,7 @@ export default function PemilikLoginPage() {
       router.push("/register/verify-npwp");
       return;
     }
-    
+
     // Step 4: Bank
     const { data: bank } = await supabase
       .from("penyedia_bank")
@@ -158,10 +158,7 @@ export default function PemilikLoginPage() {
               </div>
               <div className="text-center text-sm">
                 Belum punya akun pemilik?{" "}
-                <Link
-                  href="/manage-register"
-                  className="underline underline-offset-4"
-                >
+                <Link href="/register" className="underline underline-offset-4">
                   Daftar di sini
                 </Link>
               </div>
